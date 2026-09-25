@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "transit_core",
+  "version": "${version}",
+  "name": "Transit Core",
+  "description": "General-purpose Kotlin mod foundation for resource lifetimes and bounded background work.",
+  "authors": ["linlunaire"],
+  "license": "MIT",
+  "environment": "*",
+  "contact": {"sources": "https://github.com/linlunaire/Transit-Core"},
+  "depends": {
+    "java": ">=25",
+    "fabricloader": ">=0.19.3",
+    "fabric-language-kotlin": ">=${fabricKotlinVersion}",
+    "minecraft": "26.2"
+  }
+}

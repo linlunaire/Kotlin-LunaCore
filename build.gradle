@@ -1,0 +1,99 @@
+plugins {
+	id 'base'
+	id 'architectury-plugin' version '3.5.169'
+	id 'dev.architectury.loom-no-remap' version '1.17.491' apply false
+	id 'com.gradleup.shadow' version '9.2.2' apply false
+	id 'org.jetbrains.kotlin.jvm' version '2.4.20' apply false
+}
+
+if (JavaVersion.current() != JavaVersion.VERSION_25) {
+	throw new GradleException('Transit Core for Minecraft 26.2 requires JDK 25.')
+}
+architectury { minecraft = minecraft_version }
+
+allprojects {
+	group = rootProject.maven_group
+	version = rootProject.mod_version
+	repositories {
+		mavenCentral()
+		maven { url = 'https://maven.architectury.dev/' }
+		maven { url = 'https://maven.fabricmc.net/' }
+		maven { url = 'https://neoforged.forgecdn.net/releases/' }
+		maven { url = 'https://maven.neoforged.net/releases/' }
+		maven { url = 'https://thedarkcolour.github.io/KotlinForForge/' }
+	}
+}
+
+def artifactCheckClasses = layout.buildDirectory.dir('classes/artifactCheck')
+tasks.register('compileArtifactCheck', JavaCompile) {
+	source 'tests/TransitCoreArtifactCheck.java'
+	classpath = files()
+	destinationDirectory = artifactCheckClasses
+	options.encoding = 'UTF-8'
+	options.release = 25
+	sourceCompatibility = '25'
+	targetCompatibility = '25'
+}
+
+configure(subprojects.findAll { it.name != 'core' }) {
+	apply plugin: 'architectury-plugin'
+	apply plugin: 'dev.architectury.loom-no-remap'
+	apply plugin: 'com.gradleup.shadow'
+	java {
+		toolchain.languageVersion = JavaLanguageVersion.of(25)
+		withSourcesJar()
+	}
+	tasks.withType(JavaCompile).configureEach {
+		options.encoding = 'UTF-8'
+		options.release = 25
+	}
+	configurations {
+		embeddedCore { canBeConsumed = false }
+		artifactRuntime { canBeConsumed = false }
+	}
+	dependencies {
+		minecraft "com.mojang:minecraft:${rootProject.minecraft_version}"
+		implementation project(':core')
+		embeddedCore(project(':core')) { transitive = false }
+		artifactRuntime "org.jetbrains.kotlin:kotlin-stdlib:${rootProject.kotlin_runtime_version}"
+	}
+	processResources {
+		inputs.properties version: project.version, fabricKotlinVersion: rootProject.fabric_kotlin_version,
+			kotlinForForgeVersion: rootProject.kotlin_for_forge_version
+		filesMatching(['fabric.mod.json', 'META-INF/neoforge.mods.toml']) {
+			expand version: project.version, fabricKotlinVersion: rootProject.fabric_kotlin_version,
+				kotlinForForgeVersion: rootProject.kotlin_for_forge_version
+		}
+	}
+	shadowJar {
+		configurations = [project.configurations.embeddedCore]
+		archiveBaseName = "Transit-Core-${project.name}"
+		archiveVersion = "${rootProject.minecraft_version}-${project.version}"
+		archiveClassifier = ''
+	}
+	tasks.register('checkArtifact', JavaExec) {
+		group = 'verification'
+		dependsOn ':compileArtifactCheck', tasks.named('shadowJar')
+		classpath = files(artifactCheckClasses)
+		mainClass = 'TransitCoreArtifactCheck'
+		doFirst {
+			def runtime = configurations.artifactRuntime.files.find { it.name == "kotlin-stdlib-${rootProject.kotlin_runtime_version}.jar" }
+			if (runtime == null) throw new GradleException('Missing shared Kotlin runtime for artifact check')
+			args tasks.named('shadowJar').get().archiveFile.get().asFile.absolutePath, project.name, runtime.absolutePath
+		}
+	}
+	tasks.named('check') { dependsOn 'checkArtifact', ':core:check' }
+	tasks.register('releaseJar', Copy) {
+		dependsOn 'shadowJar', 'check'
+		from tasks.named('shadowJar').flatMap { it.archiveFile }
+		into rootProject.layout.buildDirectory.dir('release')
+		doFirst {
+			delete fileTree(destinationDir).matching {
+				include "Transit-Core-${project.name}-${rootProject.minecraft_version}-*.jar"
+			}
+		}
+	}
+	tasks.named('build') { dependsOn 'releaseJar' }
+}
+tasks.named('build') { dependsOn ':core:build', ':fabric:build', ':neoforge:build' }
+tasks.named('check') { dependsOn ':core:check', ':fabric:check', ':neoforge:check' }

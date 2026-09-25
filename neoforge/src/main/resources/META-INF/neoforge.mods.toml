@@ -1,0 +1,29 @@
+license = "MIT"
+
+[[mods]]
+modId = "transit_core"
+version = "${version}"
+displayName = "Transit Core"
+authors = "linlunaire"
+description = "General-purpose Kotlin mod foundation for resource lifetimes and bounded background work."
+
+[[dependencies.transit_core]]
+modId = "neoforge"
+type = "required"
+versionRange = "[26.2.0.75,26.3)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.transit_core]]
+modId = "kotlinforforge"
+type = "required"
+versionRange = "[${kotlinForForgeVersion},7)"
+ordering = "AFTER"
+side = "BOTH"
+
+[[dependencies.transit_core]]
+modId = "minecraft"
+type = "required"
+versionRange = "[26.2]"
+ordering = "NONE"
+side = "BOTH"

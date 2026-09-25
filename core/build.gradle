@@ -1,0 +1,72 @@
+plugins {
+	id 'java-library'
+	id 'org.jetbrains.kotlin.jvm'
+	id 'maven-publish'
+}
+
+base { archivesName = 'transit-core' }
+java {
+	toolchain.languageVersion = JavaLanguageVersion.of(25)
+	withSourcesJar()
+}
+kotlin {
+	jvmToolchain(25)
+	coreLibrariesVersion = rootProject.kotlin_runtime_version
+	compilerOptions {
+		jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_25
+		jvmDefault = org.jetbrains.kotlin.gradle.dsl.JvmDefaultMode.NO_COMPATIBILITY
+		moduleName = 'transit_core'
+	}
+}
+dependencies { implementation "org.jetbrains.kotlin:kotlin-stdlib:${rootProject.kotlin_runtime_version}" }
+tasks.withType(JavaCompile).configureEach {
+	options.encoding = 'UTF-8'
+	options.release = 25
+}
+tasks.register('checkCoreIsolation') {
+	group = 'verification'
+	inputs.files(configurations.compileClasspath)
+	doLast {
+		configurations.compileClasspath.resolvedConfiguration.resolvedArtifacts.each { artifact ->
+			if (!(artifact.moduleVersion.id.group in ['org.jetbrains.kotlin', 'org.jetbrains'])) {
+				throw new GradleException("Unexpected core dependency: ${artifact.moduleVersion.id}")
+			}
+			if (artifact.name == 'kotlin-stdlib' && artifact.moduleVersion.id.version != rootProject.kotlin_runtime_version) {
+				throw new GradleException("Core stdlib exceeds the shared runtime floor: ${artifact.moduleVersion.id}")
+			}
+		}
+	}
+}
+tasks.named('check') { dependsOn 'checkCoreIsolation' }
+
+['FrameGeometryCache': 'collection', 'FrameMembership': 'collection', 'BoundedTaskDispatcher': 'concurrent'].each { checkName, namespace ->
+	def checkClasses = layout.buildDirectory.dir("classes/${checkName}Check")
+	tasks.register("compile${checkName}Check", JavaCompile) {
+		source rootProject.file("tests/${checkName}Check.java")
+		classpath = sourceSets.main.output + configurations.runtimeClasspath
+		destinationDirectory = checkClasses
+	}
+	tasks.register("check${checkName}", JavaExec) {
+		group = 'verification'
+		dependsOn "compile${checkName}Check"
+		classpath = files(checkClasses) + sourceSets.main.output + configurations.runtimeClasspath
+		mainClass = "io.github.linlunaire.transitcore.${namespace}.${checkName}Check"
+	}
+	tasks.named('check') { dependsOn "check${checkName}" }
+}
+
+publishing {
+	publications {
+		transitCore(MavenPublication) {
+			from components.java
+			artifactId = 'transit-core'
+			pom {
+				name = 'Transit Core'
+				description = 'Minecraft-independent resource and concurrency policies for Kotlin mods.'
+				licenses { license { name = 'MIT'; url = 'https://opensource.org/license/mit' } }
+			}
+		}
+	}
+}
+tasks.named('jar') { from(rootProject.file('LICENSE')) { into 'META-INF/transit-core' } }
+tasks.named('sourcesJar') { from(rootProject.file('LICENSE')) { into 'META-INF/transit-core' } }
