@@ -1,215 +1,197 @@
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.loader.impl.discovery.ModCandidateImpl;
-import net.fabricmc.loader.impl.discovery.ModResolver;
-import net.fabricmc.loader.impl.metadata.DependencyOverrides;
-import net.fabricmc.loader.impl.metadata.LoaderModMetadata;
-import net.fabricmc.loader.impl.metadata.ModMetadataParser;
-import net.fabricmc.loader.impl.metadata.VersionOverrides;
-import net.neoforged.jarjar.selection.JarSelector;
+import com.google.gson.JsonArray
+import com.google.gson.JsonObject
+import net.fabricmc.api.EnvType
+import net.fabricmc.loader.impl.discovery.ModCandidateImpl
+import net.fabricmc.loader.impl.discovery.ModResolver
+import net.fabricmc.loader.impl.metadata.DependencyOverrides
+import net.fabricmc.loader.impl.metadata.LoaderModMetadata
+import net.fabricmc.loader.impl.metadata.ModMetadataParser
+import net.fabricmc.loader.impl.metadata.VersionOverrides
+import net.neoforged.jarjar.selection.JarSelector
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.net.URL;
-import java.net.URLClassLoader;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.IdentityHashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.function.Consumer;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
+import java.io.ByteArrayInputStream
+import java.io.IOException
+import java.net.URLClassLoader
+import java.nio.charset.StandardCharsets
+import java.nio.file.Files
+import java.nio.file.Path
+import java.util.ArrayList
+import java.util.IdentityHashMap
+import java.util.LinkedHashMap
+import java.util.Optional
+import java.util.function.Consumer
+import java.util.zip.ZipInputStream
 
 /** Uses the actual pinned loader resolvers; no Minecraft world or live instance is started. */
-public final class KotlinRuntimeResolutionCheck {
-    private static final String STDLIB_ID = "org_jetbrains_kotlin_kotlin-stdlib";
-    private static final String UNIT = "kotlin/Unit.class";
-    private static Path output;
+object KotlinRuntimeResolutionCheck {
+    private const val STDLIB_ID = "org_jetbrains_kotlin_kotlin-stdlib"
+    private const val UNIT = "kotlin/Unit.class"
+    private lateinit var output: Path
 
-    public static void main(String[] args) throws Exception {
-        Path fabricArtifact = Path.of(args[0]).toAbsolutePath();
-        Path neoArtifact = Path.of(args[1]).toAbsolutePath();
-        JarData flk = JarData.read(Path.of(args[2]));
-        JarData kff = JarData.read(Path.of(args[3]));
-        output = Path.of(args[4]);
-        Files.createDirectories(output);
-        JarData newerStdlib = JarData.read(Path.of(args[5]));
-        String baseline = args[6];
-        String newer = args[7];
+    @JvmStatic
+    @Throws(Exception::class)
+    fun main(args: Array<String>) {
+        val fabricArtifact = Path.of(args[0]).toAbsolutePath()
+        val neoArtifact = Path.of(args[1]).toAbsolutePath()
+        val flk = JarData.read(Path.of(args[2]))
+        val kff = JarData.read(Path.of(args[3]))
+        output = Path.of(args[4])
+        Files.createDirectories(output)
+        val newerStdlib = JarData.read(Path.of(args[5]))
+        val baseline = args[6]
+        val newer = args[7]
 
-        checkFabric(fabricArtifact, List.of(), baseline, "fabric-alone");
-        checkFabric(fabricArtifact, List.of(flk), newer, "fabric-with-flk-newer");
-        checkNeoForge(neoArtifact, List.of(), baseline, "neoforge-alone");
-        checkNeoForge(neoArtifact, List.of(kff), baseline, "neoforge-with-kff-same");
-        checkNeoForge(neoArtifact, List.of(kff, jarJarHolder(newerStdlib, newer)), newer,
-                "neoforge-with-kff-and-newer");
-        System.out.println("PASS: 5 real-loader resolution cases select one stdlib and execute packaged Core through it");
+        checkFabric(fabricArtifact, emptyList(), baseline, "fabric-alone")
+        checkFabric(fabricArtifact, listOf(flk), newer, "fabric-with-flk-newer")
+        checkNeoForge(neoArtifact, emptyList(), baseline, "neoforge-alone")
+        checkNeoForge(neoArtifact, listOf(kff), baseline, "neoforge-with-kff-same")
+        checkNeoForge(neoArtifact, listOf(kff, jarJarHolder(newerStdlib, newer)), newer, "neoforge-with-kff-and-newer")
+        println("PASS: 5 real-loader resolution cases select one stdlib and execute packaged Core through it")
     }
 
-    private static void checkFabric(Path corePath, List<JarData> extras, String expected, String label) throws Exception {
-        List<ModCandidateImpl> candidates = new ArrayList<>();
-        Map<ModCandidateImpl, JarData> jars = new IdentityHashMap<>();
-        collectFabric(JarData.read(corePath), true, candidates, jars);
-        for (JarData extra : extras) collectFabric(extra, true, candidates, jars);
-        for (String[] builtin : List.of(new String[]{"minecraft", "26.2"}, new String[]{"java", "25"},
-                new String[]{"fabricloader", "0.19.3"})) {
-            String metadata = "{\"schemaVersion\":1,\"id\":\"" + builtin[0] + "\",\"version\":\"" + builtin[1] + "\"}";
-            LoaderModMetadata parsed = parse(metadata.getBytes(StandardCharsets.UTF_8), builtin[0]);
-            candidates.add(fabricCandidate(parsed, builtin[0], true, List.of()));
+    private fun checkFabric(corePath: Path, extras: List<JarData>, expected: String, label: String) {
+        val candidates = ArrayList<ModCandidateImpl>()
+        val jars = IdentityHashMap<ModCandidateImpl, JarData>()
+        collectFabric(JarData.read(corePath), true, candidates, jars)
+        for (extra in extras) collectFabric(extra, true, candidates, jars)
+        for ((id, version) in listOf("minecraft" to "26.2", "java" to "25", "fabricloader" to "0.19.3")) {
+            val metadata = """{"schemaVersion":1,"id":"$id","version":"$version"}"""
+            val parsed = parse(metadata.toByteArray(StandardCharsets.UTF_8), id)
+            candidates.add(fabricCandidate(parsed, id, true, emptyList()))
         }
-        List<ModCandidateImpl> selected = ModResolver.resolve(candidates, EnvType.CLIENT, Map.of());
-        List<ModCandidateImpl> runtimes = selected.stream().filter(mod -> mod.getId().equals(STDLIB_ID)).toList();
-        require(runtimes.size() == 1, label + ": duplicate/missing Fabric stdlib");
-        require(runtimes.getFirst().getVersion().getFriendlyString().equals(expected), label + ": wrong Fabric version");
-        require(selected.stream().filter(mod -> jars.containsKey(mod) && jars.get(mod).entries.containsKey(UNIT)).count() == 1,
-                label + ": more than one selected JAR contains kotlin.Unit");
-        executeCore(corePath, jars.get(runtimes.getFirst()), expected, label);
+        val selected = ModResolver.resolve(candidates, EnvType.CLIENT, emptyMap())
+        val runtimes = selected.filter { it.id == STDLIB_ID }
+        require(runtimes.size == 1, "$label: duplicate/missing Fabric stdlib")
+        require(runtimes.first().version.friendlyString == expected, "$label: wrong Fabric version")
+        require(selected.count { jars[it]?.entries?.containsKey(UNIT) == true } == 1,
+            "$label: more than one selected JAR contains kotlin.Unit")
+        executeCore(corePath, jars.getValue(runtimes.first()), expected, label)
     }
 
-    private static ModCandidateImpl collectFabric(JarData jar, boolean root, List<ModCandidateImpl> candidates,
-            Map<ModCandidateImpl, JarData> jars) throws Exception {
-        LoaderModMetadata metadata = parse(jar.required("fabric.mod.json"), jar.name);
-        List<ModCandidateImpl> nested = new ArrayList<>();
-        for (var entry : metadata.getJars()) {
-            nested.add(collectFabric(JarData.read(jar.name + "!/" + entry.getFile(), jar.required(entry.getFile())),
-                    false, candidates, jars));
+    private fun collectFabric(jar: JarData, root: Boolean, candidates: MutableList<ModCandidateImpl>,
+        jars: MutableMap<ModCandidateImpl, JarData>): ModCandidateImpl {
+        val metadata = parse(jar.required("fabric.mod.json"), jar.name)
+        val nested = ArrayList<ModCandidateImpl>()
+        for (entry in metadata.jars) {
+            nested.add(collectFabric(JarData.read(jar.name + "!/" + entry.file, jar.required(entry.file)), false, candidates, jars))
         }
-        ModCandidateImpl candidate = fabricCandidate(metadata, jar.name, root, nested);
-        var addParent = ModCandidateImpl.class.getDeclaredMethod("addParent", ModCandidateImpl.class);
-        addParent.setAccessible(true);
-        for (ModCandidateImpl child : nested) addParent.invoke(child, candidate);
-        candidates.add(candidate);
-        jars.put(candidate, jar);
-        return candidate;
+        val candidate = fabricCandidate(metadata, jar.name, root, nested)
+        val addParent = ModCandidateImpl::class.java.getDeclaredMethod("addParent", ModCandidateImpl::class.java)
+        addParent.isAccessible = true
+        for (child in nested) addParent.invoke(child, candidate)
+        candidates.add(candidate)
+        jars[candidate] = jar
+        return candidate
     }
 
     // Keep test code outside Fabric's signed packages; reflect only over the pinned resolver's fixture construction API.
-    private static ModCandidateImpl fabricCandidate(LoaderModMetadata metadata, String name, boolean root,
-            List<ModCandidateImpl> nested) throws ReflectiveOperationException {
+    private fun fabricCandidate(metadata: LoaderModMetadata, name: String, root: Boolean, nested: List<ModCandidateImpl>): ModCandidateImpl {
         if (root) {
-            var create = ModCandidateImpl.class.getDeclaredMethod("createPlain", List.class, LoaderModMetadata.class,
-                    boolean.class, Collection.class);
-            create.setAccessible(true);
-            return (ModCandidateImpl) create.invoke(null, List.of(Path.of(metadata.getId() + ".jar")), metadata, false, nested);
+            val create = ModCandidateImpl::class.java.getDeclaredMethod("createPlain", List::class.java, LoaderModMetadata::class.java,
+                java.lang.Boolean.TYPE, Collection::class.java)
+            create.isAccessible = true
+            return create.invoke(null, listOf(Path.of(metadata.id + ".jar")), metadata, false, nested) as ModCandidateImpl
         }
-        var create = ModCandidateImpl.class.getDeclaredMethod("createNested", String.class, long.class,
-                LoaderModMetadata.class, boolean.class, Collection.class);
-        create.setAccessible(true);
-        return (ModCandidateImpl) create.invoke(null, name, 0L, metadata, false, nested);
+        val create = ModCandidateImpl::class.java.getDeclaredMethod("createNested", String::class.java, java.lang.Long.TYPE,
+            LoaderModMetadata::class.java, java.lang.Boolean.TYPE, Collection::class.java)
+        create.isAccessible = true
+        return create.invoke(null, name, 0L, metadata, false, nested) as ModCandidateImpl
     }
 
-    private static LoaderModMetadata parse(byte[] bytes, String name) throws Exception {
-        return ModMetadataParser.parseMetadata(new ByteArrayInputStream(bytes), name, List.of(),
-                new VersionOverrides(), new DependencyOverrides(output.resolve("no-overrides")), false);
-    }
-
-    private static void checkNeoForge(Path corePath, List<JarData> extras, String expected, String label) throws Exception {
-        List<JarData> roots = new ArrayList<>();
-        roots.add(JarData.read(corePath));
-        roots.addAll(extras);
-        List<JarData> selected = JarSelector.detectAndSelect(roots,
-                (jar, entry) -> Optional.ofNullable(jar.entries.get(entry)).map(ByteArrayInputStream::new),
-                (jar, entry) -> jar.nested(entry), jar -> jar.name,
-                failures -> new IllegalStateException(label + ": " + failures));
-        List<JarData> runtimes = selected.stream().filter(jar -> jar.entries.containsKey(UNIT)).toList();
-        require(runtimes.size() == 1, label + ": duplicate/missing NeoForge stdlib");
-        executeCore(corePath, runtimes.getFirst(), expected, label);
-    }
-
-    private static JarData jarJarHolder(JarData runtime, String version) {
-        String path = "META-INF/jars/kotlin-stdlib-" + version + ".jar";
-        JsonObject identity = new JsonObject();
-        identity.addProperty("group", "org.jetbrains.kotlin");
-        identity.addProperty("artifact", "kotlin-stdlib");
-        JsonObject versions = new JsonObject();
-        versions.addProperty("range", "[" + version + ",)");
-        versions.addProperty("artifactVersion", version);
-        JsonObject entry = new JsonObject();
-        entry.add("identifier", identity);
-        entry.add("version", versions);
-        entry.addProperty("path", path);
-        JsonArray entries = new JsonArray();
-        entries.add(entry);
-        JsonObject metadata = new JsonObject();
-        metadata.add("jars", entries);
-        return new JarData("compatible-newer-runtime-fixture", null, Map.of(
-                "META-INF/jarjar/metadata.json", metadata.toString().getBytes(StandardCharsets.UTF_8),
-                path, runtime.bytes));
-    }
-
-    private static void executeCore(Path artifact, JarData runtime, String expected, String label) throws Exception {
-        Path runtimePath = output.resolve(label + "-stdlib.jar");
-        Files.write(runtimePath, runtime.bytes);
-        try (var loader = new URLClassLoader(new URL[]{artifact.toUri().toURL(), runtimePath.toUri().toURL()},
-                ClassLoader.getPlatformClassLoader())) {
-            var version = loader.loadClass("kotlin.KotlinVersion");
-            require(version.getField("CURRENT").get(null).toString().equals(expected), label + ": selected runtime not executed");
-            require(java.util.Collections.list(loader.getResources(UNIT)).size() == 1, label + ": duplicate runtime classes");
-            Class<?> membership = loader.loadClass("io.github.linlunaire.transitcore.collection.FrameMembership");
-            Object instance = membership.getConstructor().newInstance();
-            Object key = new Object();
-            List<Object> added = new ArrayList<>();
-            List<Object> removed = new ArrayList<>();
-            membership.getMethod("mark", Object.class).invoke(instance, key);
-            var reconcile = membership.getMethod("reconcile", Consumer.class, Consumer.class);
-            reconcile.invoke(instance, (Consumer<Object>) added::add, (Consumer<Object>) removed::add);
-            reconcile.invoke(instance, (Consumer<Object>) added::add, (Consumer<Object>) removed::add);
-            require(added.equals(List.of(key)) && removed.equals(List.of(key)), label + ": packaged Core execution failed");
-        }
-        System.out.println("PASS: " + label + " selects and runs Kotlin " + expected);
-    }
-
-    private static void require(boolean condition, String message) {
-        if (!condition) throw new AssertionError(message);
-    }
-
-    private static final class JarData {
-        final String name;
-        final byte[] bytes;
-        final Map<String, byte[]> entries;
-        final Map<String, JarData> nested = new LinkedHashMap<>();
-
-        JarData(String name, byte[] bytes, Map<String, byte[]> entries) {
-            this.name = name;
-            this.bytes = bytes;
-            this.entries = entries;
+    private fun parse(bytes: ByteArray, name: String): LoaderModMetadata =
+        ByteArrayInputStream(bytes).use {
+            ModMetadataParser.parseMetadata(it, name, emptyList(), VersionOverrides(),
+                DependencyOverrides(output.resolve("no-overrides")), false)
         }
 
-        static JarData read(Path path) throws IOException {
-            return read(path.toString(), Files.readAllBytes(path));
-        }
+    private fun checkNeoForge(corePath: Path, extras: List<JarData>, expected: String, label: String) {
+        val roots = ArrayList<JarData>()
+        roots.add(JarData.read(corePath))
+        roots.addAll(extras)
+        val selected = JarSelector.detectAndSelect(roots,
+            { jar, entry -> Optional.ofNullable(jar.entries[entry]).map<java.io.InputStream> { ByteArrayInputStream(it) } },
+            { jar, entry -> jar.nested(entry) }, { it.name },
+            { IllegalStateException("$label: $it") })
+        val runtimes = selected.filter { it.entries.containsKey(UNIT) }
+        require(runtimes.size == 1, "$label: duplicate/missing NeoForge stdlib")
+        executeCore(corePath, runtimes.first(), expected, label)
+    }
 
-        static JarData read(String name, byte[] bytes) throws IOException {
-            Map<String, byte[]> entries = new LinkedHashMap<>();
-            try (var zip = new ZipInputStream(new ByteArrayInputStream(bytes))) {
-                ZipEntry entry;
-                while ((entry = zip.getNextEntry()) != null) {
-                    if (!entry.isDirectory()) entries.put(entry.getName(), zip.readAllBytes());
-                }
-            }
-            return new JarData(name, bytes, entries);
+    private fun jarJarHolder(runtime: JarData, version: String): JarData {
+        val path = "META-INF/jars/kotlin-stdlib-$version.jar"
+        val identity = JsonObject().apply {
+            addProperty("group", "org.jetbrains.kotlin")
+            addProperty("artifact", "kotlin-stdlib")
         }
-
-        byte[] required(String entry) {
-            byte[] content = entries.get(entry);
-            require(content != null, name + ": missing nested resource " + entry);
-            return content;
+        val versions = JsonObject().apply {
+            addProperty("range", "[$version,)")
+            addProperty("artifactVersion", version)
         }
+        val entry = JsonObject().apply {
+            add("identifier", identity)
+            add("version", versions)
+            addProperty("path", path)
+        }
+        val entries = JsonArray().apply { add(entry) }
+        val metadata = JsonObject().apply { add("jars", entries) }
+        return JarData("compatible-newer-runtime-fixture", null, mapOf(
+            "META-INF/jarjar/metadata.json" to metadata.toString().toByteArray(StandardCharsets.UTF_8),
+            path to requireNotNull(runtime.bytes)))
+    }
 
-        Optional<JarData> nested(String entry) {
-            if (!entries.containsKey(entry)) return Optional.empty();
+    private fun executeCore(artifact: Path, runtime: JarData, expected: String, label: String) {
+        val runtimePath = output.resolve("$label-stdlib.jar")
+        Files.write(runtimePath, requireNotNull(runtime.bytes))
+        URLClassLoader(arrayOf(artifact.toUri().toURL(), runtimePath.toUri().toURL()),
+            ClassLoader.getPlatformClassLoader()).use { loader ->
+            val version = loader.loadClass("kotlin.KotlinVersion")
+            require(version.getField("CURRENT").get(null).toString() == expected, "$label: selected runtime not executed")
+            require(java.util.Collections.list(loader.getResources(UNIT)).size == 1, "$label: duplicate runtime classes")
+            val membership = loader.loadClass("io.github.linlunaire.transitcore.collection.FrameMembership")
+            val instance = membership.getConstructor().newInstance()
+            val key = Any()
+            val added = ArrayList<Any>()
+            val removed = ArrayList<Any>()
+            membership.getMethod("mark", Any::class.java).invoke(instance, key)
+            val reconcile = membership.getMethod("reconcile", Consumer::class.java, Consumer::class.java)
+            reconcile.invoke(instance, Consumer<Any>(added::add), Consumer<Any>(removed::add))
+            reconcile.invoke(instance, Consumer<Any>(added::add), Consumer<Any>(removed::add))
+            require(added == listOf(key) && removed == listOf(key), "$label: packaged Core execution failed")
+        }
+        println("PASS: $label selects and runs Kotlin $expected")
+    }
+
+    private fun require(condition: Boolean, message: String) {
+        if (!condition) throw AssertionError(message)
+    }
+
+    private class JarData(val name: String, val bytes: ByteArray?, val entries: Map<String, ByteArray>) {
+        private val nested = LinkedHashMap<String, JarData>()
+
+        fun required(entry: String): ByteArray =
+            entries[entry] ?: throw AssertionError("$name: missing nested resource $entry")
+
+        fun nested(entry: String): Optional<JarData> {
+            val content = entries[entry] ?: return Optional.empty()
             try {
-                if (!nested.containsKey(entry)) nested.put(entry, read(name + "!/" + entry, entries.get(entry)));
-                return Optional.of(nested.get(entry));
-            } catch (IOException error) {
-                throw new java.io.UncheckedIOException(error);
+                return Optional.of(nested.getOrPut(entry) { read("$name!/$entry", content) })
+            } catch (error: IOException) {
+                throw java.io.UncheckedIOException(error)
+            }
+        }
+
+        companion object {
+            fun read(path: Path): JarData = read(path.toString(), Files.readAllBytes(path))
+
+            fun read(name: String, bytes: ByteArray): JarData {
+                val entries = LinkedHashMap<String, ByteArray>()
+                ZipInputStream(ByteArrayInputStream(bytes)).use { zip ->
+                    while (true) {
+                        val entry = zip.nextEntry ?: break
+                        if (!entry.isDirectory) entries[entry.name] = zip.readAllBytes()
+                    }
+                }
+                return JarData(name, bytes, entries)
             }
         }
     }

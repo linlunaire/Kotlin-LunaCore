@@ -9,27 +9,16 @@ repositories {
     maven { url = 'https://thedarkcolour.github.io/KotlinForForge/' }
 }
 dependencies {
-    runtimeResolutionCheck "net.fabricmc:fabric-loader:${fabric_loader_version}"
-    runtimeResolutionCheck 'net.neoforged:JarJarSelector:0.5.1'
+    runtimeResolutionCheck project(path: ':core', configuration: 'verificationElements')
     runtimeResolutionFlk 'net.fabricmc:fabric-language-kotlin:1.13.14+kotlin.2.4.20'
     runtimeResolutionKff 'thedarkcolour:kotlinforforge-neoforge:6.3.0'
     runtimeResolutionNewer 'org.jetbrains.kotlin:kotlin-stdlib:2.4.20'
 }
-def resolutionClasses = layout.buildDirectory.dir('classes/runtimeResolutionCheck')
-tasks.register('compileRuntimeResolutionCheck', JavaCompile) {
-    source 'tests/KotlinRuntimeResolutionCheck.java'
-    classpath = configurations.runtimeResolutionCheck
-    destinationDirectory = resolutionClasses
-    options.encoding = 'UTF-8'
-    options.release = 25
-    sourceCompatibility = '25'
-    targetCompatibility = '25'
-}
 tasks.register('checkRuntimeResolution', JavaExec) {
     group = 'verification'
     description = 'Runs real Fabric and NeoForge dependency resolvers against bundled Kotlin runtime coexistence cases.'
-    dependsOn 'compileRuntimeResolutionCheck', ':fabric:shadowJar', ':neoforge:shadowJar'
-    classpath = files(resolutionClasses, configurations.runtimeResolutionCheck)
+    dependsOn ':fabric:shadowJar', ':neoforge:shadowJar'
+    classpath = configurations.runtimeResolutionCheck
     mainClass = 'KotlinRuntimeResolutionCheck'
     maxHeapSize = '512m'
     doFirst {

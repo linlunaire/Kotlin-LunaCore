@@ -36,6 +36,8 @@ artifacts { verificationElements verificationJar }
 dependencies {
 	implementation "org.jetbrains.kotlin:kotlin-stdlib:${rootProject.kotlin_runtime_version}"
 	verificationImplementation "org.jetbrains.kotlin:kotlin-stdlib:${rootProject.kotlin_runtime_version}"
+	verificationImplementation "net.fabricmc:fabric-loader:${rootProject.fabric_loader_version}"
+	verificationImplementation 'net.neoforged:JarJarSelector:0.5.1'
 }
 tasks.withType(JavaCompile).configureEach {
 	options.encoding = 'UTF-8'
