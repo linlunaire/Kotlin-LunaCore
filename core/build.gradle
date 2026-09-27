@@ -39,20 +39,27 @@ tasks.register('checkCoreIsolation') {
 }
 tasks.named('check') { dependsOn 'checkCoreIsolation' }
 
+// During migration, the unconverted callers remain in the old directory.
+sourceSets.test.java {
+	srcDir rootProject.file('tests')
+	include '**/FrameGeometryCacheCheck.java', '**/FrameMembershipCheck.java', '**/BoundedTaskDispatcherCheck.java', '**/JavaInteropCheck.java'
+}
+
 ['FrameGeometryCache': 'collection', 'FrameMembership': 'collection', 'BoundedTaskDispatcher': 'concurrent'].each { checkName, namespace ->
-	def checkClasses = layout.buildDirectory.dir("classes/${checkName}Check")
-	tasks.register("compile${checkName}Check", JavaCompile) {
-		source rootProject.file("tests/${checkName}Check.java")
-		classpath = sourceSets.main.output + configurations.runtimeClasspath
-		destinationDirectory = checkClasses
-	}
 	tasks.register("check${checkName}", JavaExec) {
 		group = 'verification'
-		dependsOn "compile${checkName}Check"
-		classpath = files(checkClasses) + sourceSets.main.output + configurations.runtimeClasspath
+		dependsOn 'testClasses'
+		classpath = sourceSets.test.runtimeClasspath
 		mainClass = "io.github.linlunaire.transitcore.${namespace}.${checkName}Check"
 	}
 	tasks.named('check') { dependsOn "check${checkName}" }
+}
+
+// These are executable contract checks, not JUnit tests. Gradle's test task runs
+// the same checks as check, so ordinary IDE/CI test invocations do not skip them.
+tasks.named('test') {
+	enabled = false
+	dependsOn 'checkFrameGeometryCache', 'checkFrameMembership', 'checkBoundedTaskDispatcher'
 }
 
 publishing {
