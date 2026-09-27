@@ -1,24 +1,17 @@
-license = "MIT"
+license = "MIT AND Apache-2.0"
 
 [[mods]]
 modId = "transit_core"
 version = "${version}"
-displayName = "Transit Core"
+displayName = "Kotlin LunaCore"
 authors = "linlunaire"
-description = "General-purpose Kotlin mod foundation for resource lifetimes and bounded background work."
+description = "A next-generation Kotlin foundation for the Minecraft mod ecosystem."
 
 [[dependencies.transit_core]]
 modId = "neoforge"
 type = "required"
 versionRange = "[26.2.0.75,26.3)"
 ordering = "NONE"
-side = "BOTH"
-
-[[dependencies.transit_core]]
-modId = "kotlinforforge"
-type = "required"
-versionRange = "[${kotlinForForgeVersion},7)"
-ordering = "AFTER"
 side = "BOTH"
 
 [[dependencies.transit_core]]

@@ -9,5 +9,5 @@ pluginManagement {
 	}
 }
 
-rootProject.name = 'Transit-Core'
+rootProject.name = 'Kotlin-LunaCore'
 include 'core', 'fabric', 'neoforge'

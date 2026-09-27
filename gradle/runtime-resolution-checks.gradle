@@ -1,0 +1,45 @@
+// These dependencies run only in the headless compatibility fixture, never in a mod artifact.
+configurations {
+    runtimeResolutionCheck { canBeConsumed = false }
+    runtimeResolutionFlk { canBeConsumed = false; transitive = false }
+    runtimeResolutionKff { canBeConsumed = false; transitive = false }
+    runtimeResolutionNewer { canBeConsumed = false; transitive = false }
+}
+repositories {
+    maven { url = 'https://thedarkcolour.github.io/KotlinForForge/' }
+}
+dependencies {
+    runtimeResolutionCheck "net.fabricmc:fabric-loader:${fabric_loader_version}"
+    runtimeResolutionCheck 'net.neoforged:JarJarSelector:0.5.1'
+    runtimeResolutionFlk 'net.fabricmc:fabric-language-kotlin:1.13.14+kotlin.2.4.20'
+    runtimeResolutionKff 'thedarkcolour:kotlinforforge-neoforge:6.3.0'
+    runtimeResolutionNewer 'org.jetbrains.kotlin:kotlin-stdlib:2.4.20'
+}
+def resolutionClasses = layout.buildDirectory.dir('classes/runtimeResolutionCheck')
+tasks.register('compileRuntimeResolutionCheck', JavaCompile) {
+    source 'tests/KotlinRuntimeResolutionCheck.java'
+    classpath = configurations.runtimeResolutionCheck
+    destinationDirectory = resolutionClasses
+    options.encoding = 'UTF-8'
+    options.release = 25
+    sourceCompatibility = '25'
+    targetCompatibility = '25'
+}
+tasks.register('checkRuntimeResolution', JavaExec) {
+    group = 'verification'
+    description = 'Runs real Fabric and NeoForge dependency resolvers against bundled Kotlin runtime coexistence cases.'
+    dependsOn 'compileRuntimeResolutionCheck', ':fabric:shadowJar', ':neoforge:shadowJar'
+    classpath = files(resolutionClasses, configurations.runtimeResolutionCheck)
+    mainClass = 'KotlinRuntimeResolutionCheck'
+    maxHeapSize = '512m'
+    doFirst {
+        args project(':fabric').tasks.named('shadowJar').get().archiveFile.get().asFile.absolutePath,
+                project(':neoforge').tasks.named('shadowJar').get().archiveFile.get().asFile.absolutePath,
+                configurations.runtimeResolutionFlk.singleFile.absolutePath,
+                configurations.runtimeResolutionKff.singleFile.absolutePath,
+                layout.buildDirectory.dir('runtime-resolution').get().asFile.absolutePath,
+                configurations.runtimeResolutionNewer.singleFile.absolutePath,
+                kotlin_runtime_version, '2.4.20'
+    }
+}
+tasks.named('check') { dependsOn 'checkRuntimeResolution' }

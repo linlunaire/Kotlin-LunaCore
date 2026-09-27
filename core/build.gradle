@@ -61,8 +61,8 @@ publishing {
 			from components.java
 			artifactId = 'transit-core'
 			pom {
-				name = 'Transit Core'
-				description = 'Minecraft-independent resource and concurrency policies for Kotlin mods.'
+				name = 'Kotlin LunaCore'
+				description = 'A next-generation Kotlin foundation for the Minecraft mod ecosystem.'
 				licenses { license { name = 'MIT'; url = 'https://opensource.org/license/mit' } }
 			}
 		}

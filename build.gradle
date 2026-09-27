@@ -20,7 +20,6 @@ allprojects {
 		maven { url = 'https://maven.fabricmc.net/' }
 		maven { url = 'https://neoforged.forgecdn.net/releases/' }
 		maven { url = 'https://maven.neoforged.net/releases/' }
-		maven { url = 'https://thedarkcolour.github.io/KotlinForForge/' }
 	}
 }
 
@@ -56,21 +55,23 @@ configure(subprojects.findAll { it.name != 'core' }) {
 		implementation project(':core')
 		embeddedCore(project(':core')) { transitive = false }
 		artifactRuntime "org.jetbrains.kotlin:kotlin-stdlib:${rootProject.kotlin_runtime_version}"
+		// Loader-managed nesting preserves Maven identity and allows runtime deduplication.
+		include "org.jetbrains.kotlin:kotlin-stdlib:${rootProject.kotlin_runtime_version}"
 	}
 	processResources {
-		inputs.properties version: project.version, fabricKotlinVersion: rootProject.fabric_kotlin_version,
-			kotlinForForgeVersion: rootProject.kotlin_for_forge_version
+		inputs.property 'version', project.version
 		filesMatching(['fabric.mod.json', 'META-INF/neoforge.mods.toml']) {
-			expand version: project.version, fabricKotlinVersion: rootProject.fabric_kotlin_version,
-				kotlinForForgeVersion: rootProject.kotlin_for_forge_version
+			expand version: project.version
 		}
 	}
 	shadowJar {
 		configurations = [project.configurations.embeddedCore]
-		archiveBaseName = "Transit-Core-${project.name}"
+		archiveBaseName = "Kotlin-LunaCore-${project.name}"
 		archiveVersion = "${rootProject.minecraft_version}-${project.version}"
 		archiveClassifier = ''
+		from(rootProject.file('licenses')) { into 'META-INF/transit-core/licenses' }
 	}
+	net.fabricmc.loom.configuration.IncludeConfigurations.nestJars(project, tasks.named('shadowJar'), configurations.include)
 	tasks.register('checkArtifact', JavaExec) {
 		group = 'verification'
 		dependsOn ':compileArtifactCheck', tasks.named('shadowJar')
@@ -79,7 +80,7 @@ configure(subprojects.findAll { it.name != 'core' }) {
 		doFirst {
 			def runtime = configurations.artifactRuntime.files.find { it.name == "kotlin-stdlib-${rootProject.kotlin_runtime_version}.jar" }
 			if (runtime == null) throw new GradleException('Missing shared Kotlin runtime for artifact check')
-			args tasks.named('shadowJar').get().archiveFile.get().asFile.absolutePath, project.name, runtime.absolutePath
+			args tasks.named('shadowJar').get().archiveFile.get().asFile.absolutePath, project.name, runtime.absolutePath, rootProject.mod_version, rootProject.kotlin_runtime_version
 		}
 	}
 	tasks.named('check') { dependsOn 'checkArtifact', ':core:check' }
@@ -90,6 +91,7 @@ configure(subprojects.findAll { it.name != 'core' }) {
 		doFirst {
 			delete fileTree(destinationDir).matching {
 				include "Transit-Core-${project.name}-${rootProject.minecraft_version}-*.jar"
+				include "Kotlin-LunaCore-${project.name}-${rootProject.minecraft_version}-*.jar"
 			}
 		}
 	}
@@ -97,3 +99,4 @@ configure(subprojects.findAll { it.name != 'core' }) {
 }
 tasks.named('build') { dependsOn ':core:build', ':fabric:build', ':neoforge:build' }
 tasks.named('check') { dependsOn ':core:check', ':fabric:check', ':neoforge:check' }
+apply from: 'gradle/runtime-resolution-checks.gradle'

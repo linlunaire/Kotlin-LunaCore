@@ -2,16 +2,15 @@
   "schemaVersion": 1,
   "id": "transit_core",
   "version": "${version}",
-  "name": "Transit Core",
-  "description": "General-purpose Kotlin mod foundation for resource lifetimes and bounded background work.",
+  "name": "Kotlin LunaCore",
+  "description": "A next-generation Kotlin foundation for the Minecraft mod ecosystem.",
   "authors": ["linlunaire"],
-  "license": "MIT",
+  "license": ["MIT", "Apache-2.0"],
   "environment": "*",
-  "contact": {"sources": "https://github.com/linlunaire/Transit-Core"},
+  "contact": {"sources": "https://github.com/linlunaire/Kotlin-LunaCore"},
   "depends": {
     "java": ">=25",
     "fabricloader": ">=0.19.3",
-    "fabric-language-kotlin": ">=${fabricKotlinVersion}",
     "minecraft": "26.2"
   }
 }
