@@ -1,19 +1,27 @@
 # Retiring the separate Minecraft-Mappings repository
 
 The 26.2 projects do not need the old Minecraft-Mappings repository. The
-historical build inputs needed to maintain 1.21.1 live here instead, outside
-every Transit Core mod source set. Installing Transit Core is **not** required
+historical build inputs needed to maintain 1.21.1 live in this repository's
+`transit-core-0.1.0` tag, not on the current branch. Installing LunaCore is **not** required
 to run the old 1.21.1 releases.
 
 ## What is preserved
 
-`legacy/mappings/1.21.1/` contains 30 Java files and the dashboard's Fabric.js
+The archive at commit `650800892192395a8755ef41efcfe90b913a3c4a`
+contains `legacy/mappings/1.21.1/`: 30 Java files and the dashboard's Fabric.js
 5.3.0 file, exported unchanged from commit
 `59c5ee19517f61f1b00a54c013322dc32592941f`. `.gitignore` is not a build input and
 was omitted. Every byte is covered by `legacy/mappings/1.21.1.sha256` and Git
 line-ending conversion is disabled for the payload. Attribution and the
 original repository's historical license declaration are documented in
-[`NOTICE.md`](../legacy/mappings/NOTICE.md).
+[`NOTICE.md`](https://github.com/linlunaire/Kotlin-LunaCore/blob/650800892192395a8755ef41efcfe90b913a3c4a/legacy/mappings/NOTICE.md).
+
+The payload, checksums, licenses, maintenance patch and original preparation
+script are preserved together at that fixed commit. The current branch keeps
+only a small wrapper: it exports the pinned archive into a temporary directory,
+runs the original checksum verifier and preparation script, and cleans up its
+own temporary export. It never exports old Java sources into the current
+source tree. The old Minecraft-Mappings repository is not contacted.
 
 The MTR `1.21.1-3.3.2` tag already tracks its materialized Java mappings,
 including local 1.21.1 compatibility fixes. Its old `setupFiles` nevertheless
@@ -37,12 +45,20 @@ Create these adjacent checkouts:
 
 ```text
 workspace/
-  Transit-Core/
+  Kotlin-LunaCore/
   Minecraft-Transit-Railway-3.x.x/  # tag 1.21.1-3.3.2
   mtr-ante/                        # tag 1.1.1-1.21.1-beta.2
 ```
 
-From `Transit-Core`, prepare the MTR checkout:
+From `Kotlin-LunaCore` (or an existing checkout still named `Transit-Core`),
+prepare the MTR checkout. If this is a shallow clone without the archive commit,
+fetch the preserved tag once first:
+
+```sh
+git fetch origin tag transit-core-0.1.0
+```
+
+Then run:
 
 ```powershell
 pwsh -File tools/prepare-legacy-1.21.1.ps1 -MtrPath ../Minecraft-Transit-Railway-3.x.x
@@ -52,7 +68,9 @@ The script verifies all 31 hashes, checks the exact MTR baseline commit,
 preflights the patch, and refuses to overwrite differing vendor files. Repeating
 it on the same prepared checkout is safe. It makes local file changes only;
 it does not create commits, move tags, push, or contact Minecraft-Mappings.
-Use `-VerifyOnly` without `-MtrPath` to check just the archived payload.
+Use `-VerifyOnly` without `-MtrPath` to check just the archived payload. A missing
+archive fails with the fetch command above, rather than silently using an
+unverified download or a different tag target.
 
 Run the `build` task with MTR's existing Gradle wrapper first, then do the same
 in the adjacent ANTE checkout. ANTE's sibling MTR JAR lookup uses this prepared
@@ -71,14 +89,16 @@ checks out the unpatched MTR tag, still contains the old download path.
 Apply the script above before rebuilding; do not claim that an unchanged tag
 has become independent by itself.
 
-The old repository can be retired once this archive and migration tool are
-published and a fresh prepared checkout is verified. Deleting it is a separate
+The archive and migration tool were published before their duplicate files
+were removed from the current branch. Deleting the old repository is a separate
 owner action, not something this tool performs. Existing released game JARs
 do not contact the source repository at runtime.
 
 ## Validation scope
 
 - SHA-256 validation covers all 31 original payload files.
+- The current wrapper re-exports the fixed commit and runs those same 31 checks;
+  it requires no old source files in the current checkout.
 - Every payload was also checked against the original Git blob ID. Exports
   disable `core.autocrlf` explicitly so Windows archive conversion cannot
   change historical bytes.

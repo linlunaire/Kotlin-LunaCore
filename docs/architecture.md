@@ -34,6 +34,10 @@ The public name and repository changed from Transit Core to Kotlin LunaCore in 0
 
 Java functional interfaces form the current policy API. Changes to null handling, callback order, disposal, rejection or failure behavior require a compatibility test. Existing mutable game state is not cached behind a long-lived index without a real invalidation owner.
 
+Production code is entirely Kotlin. The NeoForge entrypoint is an ordinary class with one public no-argument constructor, not a Kotlin singleton or a custom language adapter. Its constructor and Kotlin metadata are checked from the final loader artifact.
+
+Policy tests live in the standard `core/src/test` source set. One deliberately Java fixture checks javac SAM/default-method compatibility; behavioral, allocation and concurrency checks are Kotlin. Packaging and real-loader resolver probes live in a separate `verification` source set, exported only as a build-time verification artifact. Their loader dependencies cannot enter the core runtime through the test configurations. Historical mappings are recovered from a pinned Git archive; they are not current production code.
+
 ## Growth rule
 
 Add a shared capability when real consumers need it and its ownership can be tested independently. A future reforge mod may need configuration validation, weighted selection and platform item/effect adapters; these are not implemented speculatively now. Keep source-derived GPL Reforges work in a separately licensed addon project, not in this MIT foundation.

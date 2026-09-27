@@ -17,6 +17,12 @@ jobs:
           distribution: temurin
           java-version: '25'
       - uses: gradle/actions/setup-gradle@v4
+      - name: Verify recoverable legacy build inputs
+        shell: pwsh
+        run: |
+          git fetch --depth=1 origin tag transit-core-0.1.0
+          if ($LASTEXITCODE -ne 0) { throw 'Could not fetch the preserved legacy archive' }
+          ./tools/prepare-legacy-1.21.1.ps1 -VerifyOnly
       - run: bash gradlew build --console=plain
       - uses: actions/upload-artifact@v4
         with:

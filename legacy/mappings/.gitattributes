@@ -1,5 +1,0 @@
-# Preserve the historical Git blobs exactly, including line endings.
-1.21.1/** -text
-UPSTREAM-README-2021.md -text -whitespace
-# Patch context lines and unchanged upstream documents intentionally retain whitespace.
-*.patch -whitespace
