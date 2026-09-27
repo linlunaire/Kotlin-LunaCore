@@ -39,13 +39,7 @@ tasks.register('checkCoreIsolation') {
 }
 tasks.named('check') { dependsOn 'checkCoreIsolation' }
 
-// During migration, the unconverted callers remain in the old directory.
-sourceSets.test.java {
-	srcDir rootProject.file('tests')
-	include '**/FrameGeometryCacheCheck.java', '**/FrameMembershipCheck.java', '**/BoundedTaskDispatcherCheck.java', '**/JavaInteropCheck.java'
-}
-
-['FrameGeometryCache': 'collection', 'FrameMembership': 'collection', 'BoundedTaskDispatcher': 'concurrent'].each { checkName, namespace ->
+['FrameGeometryCache': 'collection', 'FrameMembership': 'collection', 'BoundedTaskDispatcher': 'concurrent', 'JavaInterop': 'interop'].each { checkName, namespace ->
 	tasks.register("check${checkName}", JavaExec) {
 		group = 'verification'
 		dependsOn 'testClasses'
@@ -59,7 +53,7 @@ sourceSets.test.java {
 // the same checks as check, so ordinary IDE/CI test invocations do not skip them.
 tasks.named('test') {
 	enabled = false
-	dependsOn 'checkFrameGeometryCache', 'checkFrameMembership', 'checkBoundedTaskDispatcher'
+	dependsOn 'checkFrameGeometryCache', 'checkFrameMembership', 'checkBoundedTaskDispatcher', 'checkJavaInterop'
 }
 
 publishing {
