@@ -36,7 +36,7 @@ Java functional interfaces form the current policy API. Changes to null handling
 
 Production code is entirely Kotlin. The NeoForge entrypoint is an ordinary class with one public no-argument constructor, not a Kotlin singleton or a custom language adapter. Its constructor and Kotlin metadata are checked from the final loader artifact.
 
-Policy tests live in the standard `core/src/test` source set. One deliberately Java fixture checks javac SAM/default-method compatibility; behavioral, allocation and concurrency checks are Kotlin. Packaging and real-loader resolver probes live in a separate `verification` source set, exported only as a build-time verification artifact. Their loader dependencies cannot enter the core runtime through the test configurations. Historical mappings are recovered from a pinned Git archive; they are not current production code.
+Policy tests live in the standard `core/src/test` source set. One deliberately Java fixture checks javac SAM/default-method compatibility; behavioral, allocation and concurrency checks are Kotlin. The versioned `-checks.jar` lets consumers run these contracts against the actual core library without recompiling our test sources or relying on our directory layout. Packaging and real-loader resolver probes live in a separate `verification` source set, exported only as a build-time verification artifact. Their loader dependencies cannot enter the core runtime through the test configurations. Historical mappings are recovered from a pinned Git archive; they are not current production code.
 
 ## Growth rule
 

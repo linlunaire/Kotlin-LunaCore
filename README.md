@@ -40,7 +40,7 @@ Use **JDK 25** and the included **Gradle 9.5.1** wrapper:
 ./gradlew build
 ```
 
-Release mods are written to `build/release/`. The plain JVM library is `core/build/libs/transit-core-0.2.1.jar`; it is for compilation and isolated tests, not installation beside the loader mod. The `-verification.jar` is a build-only test runner, never a mod or consumer dependency. Kotlin is compiled with 2.4.20 against standard library 2.4.0.
+Release mods are written to `build/release/`. The plain JVM library is `core/build/libs/transit-core-0.2.1.jar`; it is for compilation and isolated tests, not installation beside the loader mod. The `-checks.jar` and `-verification.jar` are build-only test runners, never mods or runtime dependencies. Kotlin is compiled with 2.4.20 against standard library 2.4.0.
 
 Checks cover Java interoperability, identity and equality contracts, cache eviction and complete disposal, callback retry, checked exceptions and `Error` cleanup, allocation-free stable paths, 1,000 bounded jobs, worker limits, and close-during-build races. Passing these checks does not establish in-game FPS or multiplayer capacity.
 

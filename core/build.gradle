@@ -62,8 +62,8 @@ tasks.named('check') { dependsOn 'checkCoreIsolation' }
 ['FrameGeometryCache': 'collection', 'FrameMembership': 'collection', 'BoundedTaskDispatcher': 'concurrent', 'JavaInterop': 'interop'].each { checkName, namespace ->
 	tasks.register("check${checkName}", JavaExec) {
 		group = 'verification'
-		dependsOn 'testClasses'
-		classpath = sourceSets.test.runtimeClasspath
+		dependsOn 'contractCheckJar'
+		classpath = files(tasks.named('contractCheckJar')) + sourceSets.main.output + configurations.testRuntimeClasspath
 		mainClass = "io.github.linlunaire.transitcore.${namespace}.${checkName}Check"
 	}
 	tasks.named('check') { dependsOn "check${checkName}" }
@@ -75,6 +75,14 @@ tasks.named('test') {
 	enabled = false
 	dependsOn 'checkFrameGeometryCache', 'checkFrameMembership', 'checkBoundedTaskDispatcher', 'checkJavaInterop'
 }
+
+// Consumers reuse the executable contracts without depending on source layout
+// or on our Kotlin compiler. This fixture is never published as a runtime library.
+def contractCheckJar = tasks.register('contractCheckJar', Jar) {
+	archiveClassifier = 'checks'
+	from sourceSets.test.output
+}
+tasks.named('assemble') { dependsOn contractCheckJar }
 
 publishing {
 	publications {
