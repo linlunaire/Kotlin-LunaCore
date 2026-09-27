@@ -1,3 +1,14 @@
+apply plugin: 'org.jetbrains.kotlin.jvm'
+
+kotlin {
+	jvmToolchain(25)
+	coreLibrariesVersion = rootProject.kotlin_runtime_version
+	compilerOptions {
+		jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_25
+		moduleName = 'transit_core_neoforge'
+	}
+}
+
 architectury {
 	platformSetupLoomIde()
 	neoForge()
