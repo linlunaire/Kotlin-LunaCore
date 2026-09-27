@@ -23,17 +23,6 @@ allprojects {
 	}
 }
 
-def artifactCheckClasses = layout.buildDirectory.dir('classes/artifactCheck')
-tasks.register('compileArtifactCheck', JavaCompile) {
-	source 'tests/TransitCoreArtifactCheck.java'
-	classpath = files()
-	destinationDirectory = artifactCheckClasses
-	options.encoding = 'UTF-8'
-	options.release = 25
-	sourceCompatibility = '25'
-	targetCompatibility = '25'
-}
-
 configure(subprojects.findAll { it.name != 'core' }) {
 	apply plugin: 'architectury-plugin'
 	apply plugin: 'dev.architectury.loom-no-remap'
@@ -49,12 +38,14 @@ configure(subprojects.findAll { it.name != 'core' }) {
 	configurations {
 		embeddedCore { canBeConsumed = false }
 		artifactRuntime { canBeConsumed = false }
+		verificationRuntime { canBeConsumed = false }
 	}
 	dependencies {
 		minecraft "com.mojang:minecraft:${rootProject.minecraft_version}"
 		implementation project(':core')
 		embeddedCore(project(':core')) { transitive = false }
 		artifactRuntime "org.jetbrains.kotlin:kotlin-stdlib:${rootProject.kotlin_runtime_version}"
+		verificationRuntime project(path: ':core', configuration: 'verificationElements')
 		// Loader-managed nesting preserves Maven identity and allows runtime deduplication.
 		include "org.jetbrains.kotlin:kotlin-stdlib:${rootProject.kotlin_runtime_version}"
 	}
@@ -74,8 +65,8 @@ configure(subprojects.findAll { it.name != 'core' }) {
 	net.fabricmc.loom.configuration.IncludeConfigurations.nestJars(project, tasks.named('shadowJar'), configurations.include)
 	tasks.register('checkArtifact', JavaExec) {
 		group = 'verification'
-		dependsOn ':compileArtifactCheck', tasks.named('shadowJar')
-		classpath = files(artifactCheckClasses)
+		dependsOn tasks.named('shadowJar')
+		classpath = configurations.verificationRuntime
 		mainClass = 'TransitCoreArtifactCheck'
 		doFirst {
 			def runtime = configurations.artifactRuntime.files.find { it.name == "kotlin-stdlib-${rootProject.kotlin_runtime_version}.jar" }

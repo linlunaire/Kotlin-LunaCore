@@ -18,7 +18,25 @@ kotlin {
 		moduleName = 'transit_core'
 	}
 }
-dependencies { implementation "org.jetbrains.kotlin:kotlin-stdlib:${rootProject.kotlin_runtime_version}" }
+// Packaging/resolver probes are isolated from both the runtime library and its
+// policy tests. Neither their classes nor loader dependencies enter the mod JAR.
+sourceSets { verification }
+configurations {
+	verificationElements {
+		canBeConsumed = true
+		canBeResolved = false
+		extendsFrom verificationImplementation, verificationRuntimeOnly
+	}
+}
+def verificationJar = tasks.register('verificationJar', Jar) {
+	archiveClassifier = 'verification'
+	from sourceSets.verification.output
+}
+artifacts { verificationElements verificationJar }
+dependencies {
+	implementation "org.jetbrains.kotlin:kotlin-stdlib:${rootProject.kotlin_runtime_version}"
+	verificationImplementation "org.jetbrains.kotlin:kotlin-stdlib:${rootProject.kotlin_runtime_version}"
+}
 tasks.withType(JavaCompile).configureEach {
 	options.encoding = 'UTF-8'
 	options.release = 25
