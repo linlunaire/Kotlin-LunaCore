@@ -1,11 +1,11 @@
-license = "MIT AND Apache-2.0"
+license = "LGPL-3.0-or-later"
 
 [[mods]]
 modId = "transit_core"
 version = "${version}"
 displayName = "Kotlin LunaCore"
 authors = "linlunaire"
-description = "A next-generation Kotlin foundation for the Minecraft mod ecosystem."
+description = "A shared Kotlin runtime and small JVM utilities for Minecraft mods."
 
 [[dependencies.transit_core]]
 modId = "neoforge"

@@ -1,3 +1,5 @@
+> License update (0.3.0): the current LunaCore distribution uses LGPL-3.0-or-later. Historical MIT permissions and notices are retained; Kotlin remains Apache-2.0. See [NOTICE](../../NOTICE.md). The earlier investigation below records the licensing context at the time.
+
 # Kotlin runtime packaging and ecosystem scope
 
 Investigated 2026-09-27. This records source/build evidence, not an in-game compatibility claim.

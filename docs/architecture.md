@@ -40,6 +40,6 @@ Policy tests live in the standard `core/src/test` source set. One deliberately J
 
 ## Growth rule
 
-Add a shared capability when real consumers need it and its ownership can be tested independently. A future reforge mod may need configuration validation, weighted selection and platform item/effect adapters; these are not implemented speculatively now. Keep source-derived GPL Reforges work in a separately licensed addon project, not in this MIT foundation.
+Add a shared capability when real consumers need it and its ownership can be tested independently. A future reforge mod may need configuration validation, weighted selection and platform item/effect adapters; these are not implemented speculatively now. Keep source-derived GPL Reforges work in a separately licensed addon project, not in this LGPL foundation.
 
 Performance claims are limited to measured behavior: allocation fixtures, operation counts, bounded admission and cleanup tests. Neither Kotlin syntax nor a successful headless build establishes an FPS/TPS improvement or an 80-player server capacity guarantee.

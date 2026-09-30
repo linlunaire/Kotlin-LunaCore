@@ -46,6 +46,10 @@ object TransitCoreArtifactCheck {
             zip.getInputStream(nested).use { Files.copy(it, runtime, java.nio.file.StandardCopyOption.REPLACE_EXISTING) }
             require(zip.getEntry("META-INF/transit-core/licenses/Kotlin-LICENSE.txt") != null, "Missing Kotlin license")
             require(zip.getEntry("META-INF/transit-core/licenses/Kotlin-NOTICE.txt") != null, "Missing Kotlin attribution")
+            require(metadata.contains("LGPL-3.0-or-later"), "Incorrect project license")
+            for (path in listOf("META-INF/transit-core/LICENSE", "META-INF/transit-core/COPYING", "META-INF/transit-core/NOTICE.md", "META-INF/transit-core/licenses/LunaCore-MIT.txt")) {
+                require(zip.getEntry(path) != null, "Missing license/provenance: $path")
+            }
             if (fabric) {
                 require(metadata.contains(nestedPath), "Fabric cannot discover its runtime")
             } else {

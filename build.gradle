@@ -60,6 +60,9 @@ configure(subprojects.findAll { it.name != 'core' }) {
 		archiveBaseName = "Kotlin-LunaCore-${project.name}"
 		archiveVersion = "${rootProject.minecraft_version}-${project.version}"
 		archiveClassifier = ''
+	}
+	tasks.named('sourcesJar') {
+		from(rootProject.files('LICENSE', 'COPYING', 'NOTICE.md')) { into 'META-INF/transit-core' }
 		from(rootProject.file('licenses')) { into 'META-INF/transit-core/licenses' }
 	}
 	net.fabricmc.loom.configuration.IncludeConfigurations.nestJars(project, tasks.named('shadowJar'), configurations.include)
@@ -79,12 +82,6 @@ configure(subprojects.findAll { it.name != 'core' }) {
 		dependsOn 'shadowJar', 'check'
 		from tasks.named('shadowJar').flatMap { it.archiveFile }
 		into rootProject.layout.buildDirectory.dir('release')
-		doFirst {
-			delete fileTree(destinationDir).matching {
-				include "Transit-Core-${project.name}-${rootProject.minecraft_version}-*.jar"
-				include "Kotlin-LunaCore-${project.name}-${rootProject.minecraft_version}-*.jar"
-			}
-		}
 	}
 	tasks.named('build') { dependsOn 'releaseJar' }
 }
