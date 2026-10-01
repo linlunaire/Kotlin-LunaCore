@@ -97,5 +97,5 @@ publishing {
 		}
 	}
 }
-tasks.named('jar') { from(rootProject.files('LICENSE', 'COPYING', 'NOTICE.md')) { into 'META-INF/transit-core' }; from(rootProject.file('licenses')) { into 'META-INF/transit-core/licenses' } }
-tasks.named('sourcesJar') { from(rootProject.files('LICENSE', 'COPYING', 'NOTICE.md')) { into 'META-INF/transit-core' }; from(rootProject.file('licenses')) { into 'META-INF/transit-core/licenses' } }
+tasks.named('jar') { from(rootProject.files('LICENSE', 'NOTICE.md')) { into 'META-INF/transit-core' }; from(rootProject.file('licenses')) { into 'META-INF/transit-core/licenses' } }
+tasks.named('sourcesJar') { from(rootProject.files('LICENSE', 'NOTICE.md')) { into 'META-INF/transit-core' }; from(rootProject.file('licenses')) { into 'META-INF/transit-core/licenses' } }

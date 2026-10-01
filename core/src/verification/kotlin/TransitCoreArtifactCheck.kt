@@ -47,7 +47,7 @@ object TransitCoreArtifactCheck {
             require(zip.getEntry("META-INF/transit-core/licenses/Kotlin-LICENSE.txt") != null, "Missing Kotlin license")
             require(zip.getEntry("META-INF/transit-core/licenses/Kotlin-NOTICE.txt") != null, "Missing Kotlin attribution")
             require(metadata.contains("LGPL-3.0-or-later"), "Incorrect project license")
-            for (path in listOf("META-INF/transit-core/LICENSE", "META-INF/transit-core/COPYING", "META-INF/transit-core/NOTICE.md", "META-INF/transit-core/licenses/LunaCore-MIT.txt")) {
+            for (path in listOf("META-INF/transit-core/LICENSE", "META-INF/transit-core/licenses/GPL-3.0.txt", "META-INF/transit-core/NOTICE.md", "META-INF/transit-core/licenses/LunaCore-MIT.txt")) {
                 require(zip.getEntry(path) != null, "Missing license/provenance: $path")
             }
             if (fabric) {

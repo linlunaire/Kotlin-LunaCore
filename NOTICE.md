@@ -2,7 +2,7 @@
 
 Copyright (c) 2026 linlunaire.
 
-Licensed under the GNU Lesser General Public License, version 3 or any later version (LGPL-3.0-or-later). See [LICENSE](LICENSE) and [COPYING](COPYING).
+Licensed under the GNU Lesser General Public License, version 3 or any later version (LGPL-3.0-or-later). See [LICENSE](LICENSE) and [GPLv3 terms](licenses/GPL-3.0.txt).
 
 ## Third-party notices
 
